@@ -65,6 +65,22 @@ the path has processed since last time.
 
 2. There will be some latency between the simulator running and the path planner returning a path, with optimized code usually its not very long maybe just 1-3 time steps. During this delay the simulator will continue using points that it was last given, because of this its a good idea to store the last points you have used so you can have a smooth transition. previous_path_x, and previous_path_y can be helpful for this transition since they show the last points given to the simulator controller with the processed points already removed. You would either return a path that extends this previous path or make sure to create a new path that has a smooth transition with this last path.
 
+## Algorithm
+
+The path planner in main.cpp executes the following algorithm to output the maneuver.
+
+1. Look for cars ahead of us by 30 or more metres.
+
+2. If there are no cars ahead, proceed with a straight path along the lane by gradually increasing the speed upto the maximum limit.
+   a) To create a straight path along the lane, create a spline with the car's position, its previous position, positions 30, 60 and 90 metres ahead in the same lane.
+   b) Draw points from the spline spaced with the desired speed at each interval.
+   c) Produce a maximum of 5 such points to the simulator.
+3) If there are cars ahead of us, slow down the car until the car's speed matches the obstacle's speed.
+   a) Look for cars within 30 metres ahead in the neighboring lanes.
+   b) If there are no cars in the neighboring lanes, create a spline with the car's position, its previous position and distances 30, 60 and 90 metres in constant lane width between the current lane and the intended final lane. This increasing lane width is to have a smooth lane transition.
+   c) If there are cars in the neighboring lanes, slow down until we reach the obstacles' speed and wait for neighboring lanes to clear.
+   d) Once lane change maneuver spline is computed, take 5 points along the curve spaced so as to have the desired speed. Produce these points to the simulator.
+
 ## Tips
 
 A really helpful resource for doing this project and creating smooth trajectories was using http://kluge.in-chemnitz.de/opensource/spline/, the spline function is in a single hearder file is really easy to use.

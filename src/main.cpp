@@ -16,6 +16,8 @@ using std::string;
 using std::vector;
 using Eigen::MatrixXd;
 
+/*Helper static function. */
+
 static void printVelAndAcc(vector<double> next_x_vals, vector<double> next_y_vals)
 {
   vector<double> velocity;
@@ -141,109 +143,11 @@ int main() {
           static bool change_lanes = false;
 
           static bool lane_change_man_in_progress = false;
-
-          static double prev_car_speed = 0;
           
           static double global_car_d = car_d;
 
           int size = previous_path_x.size();
-          //if(abs(prev_car_speed - car_speed) > 10)
-              //std::cout << prev_car_speed << " " << car_speed << std::endl;
-
-          prev_car_speed = car_speed;
-          /**
-           * TODO: define a path made up of (x,y) points that the car will visit
-           *   sequentially every .02 seconds
-          **/
-          const double car_speed_inc = 0.1;
-
-          bool stop_flag = false;
-
-          int count = 0;
-          
-          /*double prev_s = car_s;
-          double prev_car_speed = car_speed;
-          double prev_acc = 0;
-          
-          double end_car_speed = prev_car_speed;
-          double end_car_acc = 0;
-
-          for(int i = 0; i < 50; i++)
-          {
-            const double T = 0.2;
-            double new_s = prev_s + 2;
-            stop_flag = false;
-            while(!stop_flag)
-            {
-                vector<double> start = {prev_s, prev_car_speed, prev_acc};
-                end_car_speed = (new_s - prev_s) * 5;
-                end_car_acc = (end_car_speed - prev_car_speed) * 5;
-                vector<double> end = {new_s, end_car_speed, end_car_acc};
-
-                Eigen::MatrixXd A = Eigen::MatrixXd(3, 3);
-                A << T*T*T, T*T*T*T, T*T*T*T*T,
-                3*T*T, 4*T*T*T,5*T*T*T*T,
-                6*T, 12*T*T, 20*T*T*T;
-
-                Eigen::MatrixXd B = Eigen::MatrixXd(3,1);     
-                B << end[0]-(start[0]+start[1]*T+0.5*start[2]*T*T),
-                end[1]-(start[1]+start[2]*T),
-                end[2]-start[2];
-
-                Eigen::MatrixXd Ai = A.inverse();
-
-                Eigen::VectorXd C = Ai*B;
-              
-                if((abs(C[0]) > 8) || (abs(end_car_speed) > 45) || (abs(end_car_acc) > 8))
-                {
-                  if(end_car_speed > 1.1*prev_car_speed)
-                  	end_car_speed = (end_car_speed + prev_car_speed)/2;
-                  if(end_car_acc > 1.1*prev_acc)
-                  	end_car_acc = (end_car_acc + prev_acc)/2;
-                  if((end_car_speed <= 1.1*prev_car_speed) && (end_car_acc <= 1.1*prev_acc))
-                    new_s -= 0.2;
-                  if(new_s == prev_s)
-                    stop_flag = true;
-                }
-                else
-                {
-                  stop_flag = true;
-                }
-            }
-
-              vector<double> x_y = getXY(new_s, car_d, map_waypoints_s, 
-                                         map_waypoints_x, 
-                                         map_waypoints_y);
-                        std::cout << "new_s " << new_s << " " << end_car_speed << " " << end_car_acc << " " <<  std::endl;
-
-              prev_s = new_s;
-              prev_car_speed = end_car_speed;
-              prev_acc = end_car_acc;
-            
-              next_x_vals.push_back(x_y[0]);
-              next_y_vals.push_back(x_y[1]);
-          }*/
-          const double T = 0.02;
-          vector<double> time;
-          /*for(int i = 0; i < 50; i++)
-          {
-            double new_s = car_s + (i+1) * 0.3;
-            vector<double> x_y = getXY(new_s, car_d, map_waypoints_s, 
-                                       map_waypoints_x, 
-                                       map_waypoints_y);
-
-            time.push_back(T * (i+1));
-            next_x_vals.push_back(x_y[0]);
-            next_y_vals.push_back(x_y[1]);
-          }
-          tk::spline spline_x(time, next_x_vals);
-          tk::spline spline_y(next_x_vals, next_y_vals);
-          
-          for(int i = 0; i < 50; i++)
-          {
-            next_x_vals[i] = spline_x(time[i]);
-            next_y_vals[i] = spline_y(next_x_vals[i]);
-          }*/
+ 
           vector<double> spline_x;
           vector<double> spline_y;
 
@@ -255,7 +159,7 @@ int main() {
           vector<double> further_point2;
           vector<double> further_point3;
           
-          
+          /*Initialise the furthest points of the spline at car_s + 30, 60 and 90 metres.*/
           further_point1 =  getXY(car_s + 30, global_car_d, map_waypoints_s, 
                                   map_waypoints_x, 
                                   map_waypoints_y);
@@ -268,7 +172,7 @@ int main() {
                                   map_waypoints_x, 
                                   map_waypoints_y);
 
-          static double obstacle_speed = -1;
+          static double obstacle_speed = -1; // Denotes the speed of the object 30m ahead of us.
           /* Check for objects ahead of us.*/
           for(int j = 0; j < sensor_fusion.size(); j++)
           {
@@ -276,6 +180,7 @@ int main() {
             {
               if(sqrt(double(sensor_fusion[j][3])*double(sensor_fusion[j][3]) + double(sensor_fusion[j][4])*double(sensor_fusion[j][4])) < ref_speed)
               {
+                /*If object is slower than the car's speed, enable lane change maneuver check.*/
                 obstacle_speed = sqrt(double(sensor_fusion[j][3])*double(sensor_fusion[j][3]) + double(sensor_fusion[j][4])*double(sensor_fusion[j][4]));
                 change_lanes = true;
                 break;
@@ -306,6 +211,7 @@ int main() {
               
               if(change_lanes)
               {
+                /*Furthest spline points progressing towards neighboring right lane.*/
                 further_point1 =  getXY(car_s + 30, 2, map_waypoints_s, 
                                         map_waypoints_x, 
                                         map_waypoints_y);
@@ -356,6 +262,7 @@ int main() {
 
               if(lane_change == 'l')
               {
+                /*Furthest spline points progressing towards neighboring left lane.*/
                 further_point1 =  getXY(car_s + 30, 6, map_waypoints_s, 
                                         map_waypoints_x, 
                                         map_waypoints_y);
@@ -376,6 +283,7 @@ int main() {
               }
               else if(lane_change == 'r')
               {
+                /*Furthest spline points progressing towards neighboring right lane.*/
                 further_point1 =  getXY(car_s + 30, 6, map_waypoints_s, 
                                         map_waypoints_x, 
                                         map_waypoints_y);
@@ -411,6 +319,7 @@ int main() {
               
               if(change_lanes)
               {
+                /*Furthest spline points progressing towards neighboring left lane.*/
                 further_point1 =  getXY(car_s + 30, 8, map_waypoints_s, 
                                         map_waypoints_x, 
                                         map_waypoints_y);
@@ -435,6 +344,7 @@ int main() {
           }
 
 
+          /*Initialise spline points with car's position and its previous point (projected if not available.).*/
           if(previous_path_x.size() < 2)
           {
             prev_x = car_x - 0.3 * cos(car_yaw);
@@ -466,7 +376,7 @@ int main() {
             prev_yaw = atan2(prev_y-prev_prev_y, prev_x-prev_prev_x);
           }
 
-
+         /*Append furthest points to spline.*/
           spline_x.push_back(further_point1[0]);
           spline_y.push_back(further_point1[1]);
           
@@ -476,6 +386,7 @@ int main() {
           spline_x.push_back(further_point3[0]);
           spline_y.push_back(further_point3[1]);
           
+          /*Shift spline points to car coordinates and sort them in ascending order.*/
           for(int i = 0; i < spline_x.size(); i++)
           {
             double shift_x = spline_x[i]-prev_x;
@@ -512,10 +423,11 @@ int main() {
           }
 
           double x_i_0 = 0;
-          for(int i = 0; i <= (10-previous_path_x.size()); i++)
+          for(int i = 0; i <= (5-previous_path_x.size()); i++)
           {
             if(obstacle_speed == -1)
             {
+              /*Increase speed until it reaches reference speed.*/
               if(ref_speed < 22)
               {
                 ref_speed += 0.05;
@@ -527,10 +439,7 @@ int main() {
             }
             else if(ref_speed > obstacle_speed)
             {
-                //std::cout << "obs" << obstacle_speed << std::endl;
-
-                //std::cout << ref_speed << std::endl;
-
+               /*If an obstacle is identified ahead, decrease the car's speed until it matches the obstacles' speed.*/
                 ref_speed -= 0.1;
             }
 
@@ -543,6 +452,7 @@ int main() {
 
             double vel = distance(x_i_0, spline_poly(x_i_0), x, spline_poly(x))/0.02;
 
+           /*Sanity check to ensure that increase in velocity due to the points from the spline doesn't cross the reference speed set by us..*/
             while(abs(vel - ref_speed) > 10)
             {
               //std::cout << distance(x_i_0, spline_poly(x_i_0), x, spline_poly(x))/0.02  << " " << ref_speed << std::endl;
@@ -568,6 +478,7 @@ int main() {
             
             x_i_0 = x;
             
+           /*Convert the path points to global coordinates and append them to vector.*/
             x = (x_ref * cos(prev_yaw) - y_ref * sin(prev_yaw)) + prev_x;
             double y = (x_ref * sin(prev_yaw) + y_ref * cos(prev_yaw)) + prev_y;
             
@@ -575,29 +486,6 @@ int main() {
             next_y_vals.push_back(y);
 
           }
-          /*while((car_speed < 50) && !stop_flag && (count < 20))
-          {
-            for(int i = 0; i < sensor_fusion.size(); i++)
-            {
-                if(abs(double(sensor_fusion[i][5]) - (car_s + car_speed*0.2)) < 10 && abs(double(sensor_fusion[i][6]) - car_d) < 0.5)
-                {
-                    car_speed--;
-                    stop_flag = true;
-                }
-            }
-              double new_s = car_s + car_speed*0.2;
-              vector<double> x_y = getXY(new_s, car_d, map_waypoints_s, 
-                                         map_waypoints_x, 
-                                         map_waypoints_y);
-              
-              next_x_vals.push_back(x_y[0]);
-              next_y_vals.push_back(x_y[1]);
-
-              car_speed++;
-              count++;
-          }*/
-          
-          //printVelAndAcc(next_x_vals, next_y_vals);
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
